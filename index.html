@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>86 | Exclusieve Producten</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root {
             --bg-color: #050505;
@@ -1356,6 +1357,11 @@
             }
         }
 
+
+        const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
+        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
         // Initiële setup
         renderCategoryNavigation();
         renderCatalog();
