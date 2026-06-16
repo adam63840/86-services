@@ -1360,14 +1360,14 @@
 
         const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         // Overschrijf de oude renderCatalog om live data uit Supabase te halen
 async function renderCatalog() {
   try {
     // 1. Haal de producten live op uit Supabase
-    const { data: databaseProducts, error } = await supabase
-      .from('products')
-      .select('*');
+const { data: databaseProducts, error } = await supabaseClient
+  .from('products')
+  .select('*');
 
     if (error) {
       console.error("Fout bij ophalen van producten uit Supabase:", error.message);
