@@ -1362,10 +1362,11 @@ const { data: databaseProducts, error } = await supabaseClient
       return;
     }
 
-    // 2. Zoek de HTML-container waar de producten in moeten staan
+   // 2. Zoek de HTML-container waar de producten in moeten staan
     const catalogContainer = document.getElementById('product-grid') || 
                              document.getElementById('products-grid') || 
-                             document.getElementById('catalogus');
+                             document.getElementById('catalogus') ||
+                             document.getElementById('product-container');
 
     // Als de container is gevonden, voer dan pas de HTML-opbouw uit
     if (catalogContainer) {
@@ -1395,6 +1396,9 @@ const { data: databaseProducts, error } = await supabaseClient
         // Als er geen container is, loggen we dat rustig zonder te crashen
         console.log("Geen product-container gevonden op deze specifieke pagina.");
     }
+
+} catch (err) {
+    console.error('Onverwachte fout: ', err);
 }
         
         // Initiële setup
