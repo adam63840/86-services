@@ -1365,37 +1365,36 @@ const { data: databaseProducts, error } = await supabaseClient
     // 2. Zoek de HTML-container waar de producten in moeten staan
     const catalogContainer = document.getElementById('product-grid') || 
                              document.getElementById('products-grid') || 
-                             document.getElementById('catalogus'); 
+                             document.getElementById('catalogus');
 
-    if (!catalogContainer) {
-      console.error("Kon de product-container op de HTML pagina niet vinden. Controleer de id van je div.");
-      return;
+    // Als de container is gevonden, voer dan pas de HTML-opbouw uit
+    if (catalogContainer) {
+        
+        catalogContainer.innerHTML = ''; // Maak de container leeg
+
+        // Als er geen producten zijn gevonden, toon een melding
+        if (!databaseProducts || databaseProducts.length === 0) {
+            catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
+        } else {
+            // Bouw de HTML op voor elk product uit de database
+            databaseProducts.forEach(product => {
+                const productElement = document.createElement('div');
+                productElement.className = 'product-card'; 
+
+                productElement.innerHTML = `
+                    <img src="${product.imgs || ''}" alt="${product.name || 'Product'}" style="max-width: 100%; height: auto;">
+                    <h3>${product.name || 'Naamloos product'}</h3>
+                    <p class="price">Prijs: €${product.price || '0.00'}</p>
+                `;
+
+                catalogContainer.appendChild(productElement);
+            });
+        }
+
+    } else {
+        // Als er geen container is, loggen we dat rustig zonder te crashen
+        console.log("Geen product-container gevonden op deze specifieke pagina.");
     }
-    
-    catalogContainer.innerHTML = ''; // Maak de container leeg
-
-    // Als er geen producten zijn gevonden, toon een melding
-    if (!databaseProducts || databaseProducts.length === 0) {
-      catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
-      return;
-    }
-
-    // 3. Bouw de HTML op voor elk product uit de database
-    databaseProducts.forEach(product => {
-      const productElement = document.createElement('div');
-      productElement.className = 'product-card'; // Gebruikt jouw bestaande CSS styling voor een kaartje
-      
-      productElement.innerHTML = `
-        <img src="${product.imgs || ''}" alt="${product.name || 'Product'}" style="max-width: 100%; height: auto; border-radius: 8px;">
-        <h3>${product.name || 'Naamloos product'}</h3>
-        <p class="price">Prijs: €${product.price || '0.00'}</p>
-      `;
-      
-      catalogContainer.appendChild(productElement);
-    });
-  } catch (err) {
-    console.error("Onverwachte fout:", err);
-  }
 }
         
         // Initiële setup
