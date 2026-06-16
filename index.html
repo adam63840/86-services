@@ -1361,6 +1361,54 @@
         const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
         const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Overschrijf de oude renderCatalog om live data uit Supabase te halen
+async function renderCatalog() {
+  try {
+    // 1. Haal de producten live op uit Supabase
+    const { data: databaseProducts, error } = await supabase
+      .from('products')
+      .select('*');
+
+    if (error) {
+      console.error("Fout bij ophalen van producten uit Supabase:", error.message);
+      return;
+    }
+
+    // 2. Zoek de HTML-container waar de producten in moeten staan
+    const catalogContainer = document.getElementById('product-grid') || 
+                             document.getElementById('products-grid') || 
+                             document.getElementById('catalogus'); 
+
+    if (!catalogContainer) {
+      console.error("Kon de product-container op de HTML pagina niet vinden. Controleer de id van je div.");
+      return;
+    }
+    
+    catalogContainer.innerHTML = ''; // Maak de container leeg
+
+    // Als er geen producten zijn gevonden, toon een melding
+    if (!databaseProducts || databaseProducts.length === 0) {
+      catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
+      return;
+    }
+
+    // 3. Bouw de HTML op voor elk product uit de database
+    databaseProducts.forEach(product => {
+      const productElement = document.createElement('div');
+      productElement.className = 'product-card'; // Gebruikt jouw bestaande CSS styling voor een kaartje
+      
+      productElement.innerHTML = `
+        <img src="${product.imgs || ''}" alt="${product.name || 'Product'}" style="max-width: 100%; height: auto; border-radius: 8px;">
+        <h3>${product.name || 'Naamloos product'}</h3>
+        <p class="price">Prijs: €${product.price || '0.00'}</p>
+      `;
+      
+      catalogContainer.appendChild(productElement);
+    });
+  } catch (err) {
+    console.error("Onverwachte fout:", err);
+  }
+}
         
         // Initiële setup
         renderCategoryNavigation();
