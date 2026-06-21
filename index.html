@@ -1251,7 +1251,7 @@
             }
         }
 
-        function saveProductFromAdmin() {
+async function saveProductFromAdmin() {
             const title = document.getElementById('newTitle').value;
             const desc = document.getElementById('newDesc').value;
             const sizeType = document.getElementById('newSizeType').value;
@@ -1266,14 +1266,10 @@
             const hasDiscountOpt = document.getElementById('hasDiscount').value === 'ja';
             const discountPercentVal = parseInt(document.getElementById('discountPercent').value) || 0;
 
-            if(!title || !desc || !img1 || !priceVal) { alert('Vul minimaal een Titel, Prijs, Beschrijving en Hoofdfoto in!'); return; }
-
-            const imgs = [img1];
-            if(img2) imgs.push(img2);
-
-            const specs = [];
-            if(spec1) specs.push(spec1);
-            if(spec2) specs.push(spec2);
+            if(!title || !desc || !img1 || !priceVal) { 
+                alert('Vul minimaal een Titel, Prijs, Beschrijving en Hoofdfoto in!'); 
+                return; 
+            }
 
             const stock = parseInt(stockVal) || 0;
             const basePrice = parseFloat(priceVal) || 0.00;
@@ -1283,50 +1279,46 @@
                 finalPrice = basePrice - (basePrice * (discountPercentVal / 100));
             }
 
-            const editId = document.getElementById('editProductId').value;
+            // Dit object sturen we rechtstreeks naar Supabase
+            const productData = {
+                title: title,
+                desc: desc,
+                price: finalPrice,
+                imgs: img1, 
+                category: category
+            };
 
-            if(editId) {
-                const prodIndex = productenDatabase.findIndex(p => p.id == editId);
-                if(prodIndex !== -1) {
-                    productenDatabase[prodIndex].title = title;
-                    productenDatabase[prodIndex].desc = desc;
-                    productenDatabase[prodIndex].sizeType = sizeType;
-                    productenDatabase[prodIndex].stock = stock;
-                    productenDatabase[prodIndex].category = category;
-                    productenDatabase[prodIndex].originalPrice = basePrice;
-                    productenDatabase[prodIndex].hasDiscount = hasDiscountOpt;
-                    productenDatabase[prodIndex].discountPercent = discountPercentVal;
-                    productenDatabase[prodIndex].price = finalPrice;
-                    productenDatabase[prodIndex].imgs = imgs;
-                    productenDatabase[prodIndex].specs = specs;
-                    productenDatabase[prodIndex].isSoldOut = stock <= 0;
-                    alert('Product succesvol gewijzigd en live bijgewerkt!');
+            try {
+                const editId = document.getElementById('editProductId').value;
+
+                if(editId) {
+                    // Update bestaand product
+                    const { error } = await supabaseClient
+                        .from('products')
+                        .update(productData)
+                        .eq('id', editId);
+
+                    if (error) throw error;
+                    alert('Product succesvol gewijzigd in Supabase!');
+                } else {
+                    // Voeg nieuw product toe
+                    const { error } = await supabaseClient
+                        .from('products')
+                        .insert([productData]);
+
+                    if (error) throw error;
+                    alert(`Product "${title}" staat succesvol live in Supabase!`);
                 }
-            } else {
-                const nieuwProduct = {
-                    id: Date.now(),
-                    title: title,
-                    desc: desc,
-                    originalPrice: basePrice,
-                    hasDiscount: hasDiscountOpt,
-                    discountPercent: discountPercentVal,
-                    price: finalPrice,
-                    imgs: imgs,
-                    specs: specs,
-                    sizeType: sizeType,
-                    category: category,
-                    stock: stock,
-                    isSoldOut: stock <= 0
-                };
-                productenDatabase.push(nieuwProduct);
-                alert(`Product "${title}" staat live!`);
+
+                clearAdminForm();
+                renderCatalog();
+                closeAdminModal();
+
+            } catch (err) {
+                console.error("Supabase Fout:", err.message);
+                alert("Er ging iets mis met opslaan in de database: " + err.message);
             }
-
-            clearAdminForm();
-            renderCatalog();
-            closeAdminModal();
         }
-
         function triggerAdminLogin() {
             const pass = prompt("Voer de eigenaar toegangscode in:");
             if (pass === "86comunnity123!") { 
