@@ -1279,7 +1279,6 @@ async function saveProductFromAdmin() {
                 finalPrice = basePrice - (basePrice * (discountPercentVal / 100));
             }
 
-            // Dit object sturen we rechtstreeks naar Supabase
             const productData = {
                 title: title,
                 desc: desc,
@@ -1292,7 +1291,6 @@ async function saveProductFromAdmin() {
                 const editId = document.getElementById('editProductId').value;
 
                 if(editId) {
-                    // Update bestaand product
                     const { error } = await supabaseClient
                         .from('products')
                         .update(productData)
@@ -1301,7 +1299,6 @@ async function saveProductFromAdmin() {
                     if (error) throw error;
                     alert('Product succesvol gewijzigd in Supabase!');
                 } else {
-                    // Voeg nieuw product toe
                     const { error } = await supabaseClient
                         .from('products')
                         .insert([productData]);
@@ -1319,6 +1316,7 @@ async function saveProductFromAdmin() {
                 alert("Er ging iets mis met opslaan in de database: " + err.message);
             }
         }
+
         function triggerAdminLogin() {
             const pass = prompt("Voer de eigenaar toegangscode in:");
             if (pass === "86comunnity123!") { 
@@ -1337,7 +1335,7 @@ async function saveProductFromAdmin() {
             }
         }
 
-// Dit staat nu op de juiste plek onderaan binnen het script
+        // Supabase Configuratie & Client instellen
         const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -1345,7 +1343,6 @@ async function saveProductFromAdmin() {
         // Overschrijf de oude renderCatalog om live data uit Supabase te halen
         async function renderCatalog() {
             try {
-                // 1. Haal de producten live op uit Supabase
                 const { data: databaseProducts, error } = await supabaseClient
                     .from('products')
                     .select('*');
@@ -1355,23 +1352,18 @@ async function saveProductFromAdmin() {
                     return;
                 }
 
-                // 2. Zoek de HTML-container waar de producten in moeten staan
                 const catalogContainer = document.getElementById('catalogGrid');
 
-                // Als de container is gevonden, voer dan pas de HTML-opbouw uit
                 if (catalogContainer) {
-                    catalogContainer.innerHTML = ''; // Maak de container leeg
+                    catalogContainer.innerHTML = ''; 
 
-                    // Als er geen producten zijn gevonden, toon een melding
                     if (!databaseProducts || databaseProducts.length === 0) {
                         catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
                     } else {
-                        // 3. Bouw de HTML op voor elk product uit de database
                         databaseProducts.forEach(product => {
                             const card = document.createElement('div');
                             card.classList.add('product-card');
                             
-                            // Zorg dat we de data netjes tonen (we vallen terug op lege waarden als er iets mist)
                             const title = product.title || 'Naamloos product';
                             const desc = product.desc || '';
                             const price = typeof product.price === 'number' ? product.price.toFixed(2) : '0.00';
@@ -1395,10 +1387,7 @@ async function saveProductFromAdmin() {
                             catalogContainer.appendChild(card);
                         });
                     }
-                } else {
-                    console.log("Geen product-container gevonden op deze pagina.");
                 }
-
             } catch (err) {
                 console.error('Onverwachte fout: ', err);
             }
