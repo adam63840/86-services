@@ -1337,7 +1337,10 @@ async function saveProductFromAdmin() {
             }
         }
 
-
+// Dit staat nu op de juiste plek onderaan binnen het script
+        const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
+        const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Overschrijf de oude renderCatalog om live data uit Supabase te halen
         async function renderCatalog() {
@@ -1365,31 +1368,33 @@ async function saveProductFromAdmin() {
                     } else {
                         // 3. Bouw de HTML op voor elk product uit de database
                         databaseProducts.forEach(product => {
-                            const productElement = document.createElement('div');
-                            productElement.className = 'product-card'; 
+                            const card = document.createElement('div');
+                            card.classList.add('product-card');
+                            
+                            // Zorg dat we de data netjes tonen (we vallen terug op lege waarden als er iets mist)
+                            const title = product.title || 'Naamloos product';
+                            const desc = product.desc || '';
+                            const price = typeof product.price === 'number' ? product.price.toFixed(2) : '0.00';
+                            const imgUrl = product.imgs || '';
+                            const category = product.category || 'algemeen';
 
-                            // Klikbaar maken zodat de pop-up ook werkt met live data
-                            productElement.onclick = () => openProductModal(product);
-
-                            productElement.innerHTML = `
+                            card.innerHTML = `
                                 <div class="product-img-holder">
-                                    <img src="${product.imgs || ''}" alt="${product.title || 'Product'}">
+                                    <img src="${imgUrl}" alt="Product Image">
                                 </div>
                                 <div class="product-info">
-                                    <h3>${product.title || 'Naamloos product'}</h3>
-                                    <div class="product-price">€ ${product.price || '0.00'}</div>
-                                    <p>${product.desc || ''}</p>
+                                    <h3>${title}</h3>
+                                    <div class="product-price">€ ${price}</div>
+                                    <p>${desc}</p>
                                     <div class="product-meta">
-                                        <span class="product-tag">${product.category || 'algemeen'}</span>
+                                        <span class="product-tag">${category}</span>
                                         <span class="view-btn">Bekijk Info &rarr;</span>
                                     </div>
                                 </div>
                             `;
-
-                            catalogContainer.appendChild(productElement);
+                            catalogContainer.appendChild(card);
                         });
                     }
-
                 } else {
                     console.log("Geen product-container gevonden op deze pagina.");
                 }
@@ -1399,7 +1404,7 @@ async function saveProductFromAdmin() {
             }
         }
 
-        // Zorg ervoor dat de website de functies direct uitvoert als de pagina opstart
+        // Start de boel op zodra de pagina geladen is
         window.addEventListener('DOMContentLoaded', () => {
             renderCategoryNavigation();
             renderCatalog();
