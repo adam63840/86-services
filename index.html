@@ -1338,10 +1338,6 @@ async function saveProductFromAdmin() {
         }
 
 
-        // Supabase Configuratie
-        const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // Overschrijf de oude renderCatalog om live data uit Supabase te halen
         async function renderCatalog() {
