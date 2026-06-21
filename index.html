@@ -79,7 +79,6 @@
             background: linear-gradient(135deg, #fff 0%, #888 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            -webkit-transition: var(--transition);
             transition: var(--transition);
             cursor: pointer;
         }
@@ -395,7 +394,7 @@
         /* WINKELWAGEN EN ADMIN DESIGN */
         .cart-modal-content { max-width: 500px; grid-template-columns: 1fr; padding: 2.5rem !important; }
         .cart-item-row { display: flex; justify-content: space-between; align-items: center; padding: 0.8rem 0; border-bottom: 1px solid #222; }
-        .remove-btn { background: none; border: none; color: var(--sale-color); cursor: pointer; }
+        .remove-btn { background: none; border: none; color: var(--sale-color); cursor: pointer; font-weight: bold; }
 
         /* ADMIN PANELS RESPONSIVE LAYOUT */
         .admin-content { max-width: 1250px; grid-template-columns: 1.1fr 1fr; padding: 2rem !important; gap: 1.5rem; width: 95%; }
@@ -413,7 +412,7 @@
         .admin-product-row { display: flex; flex-direction: column; background: #161616; padding: 0.8rem; border-radius: 6px; margin-bottom: 0.8rem; border: 1px solid #222; font-size: 0.85rem; gap: 0.5rem; }
         @media (min-width: 600px) { .admin-product-row { flex-direction: row; align-items: center; justify-content: space-between; } }
         .admin-stock-controls { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
-        .stock-input-mini { width: 45px; background: #000; color: #fff; border: 1px solid #444; padding: 0.3rem; text-align: center; border-radius: 4px; }
+        .stock-input-mini { width: 50px; background: #000; color: #fff; border: 1px solid #444; padding: 0.3rem; text-align: center; border-radius: 4px; }
         .status-toggle-btn { padding: 0.3rem 0.5rem; font-size: 0.75rem; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .status-active { background-color: rgba(0, 204, 102, 0.1); color: var(--success-color); border: 1px solid var(--success-color); }
         .status-soldout { background-color: rgba(255, 68, 68, 0.1); color: var(--sale-color); border: 1px solid var(--sale-color); }
@@ -639,26 +638,63 @@
             { slug: 'fully-outfit', name: 'Fully Outfit' }
         ];
 
+        // Gecorrigeerde database (Lege eerste object is verwijderd)
+        let productenDatabase = [
+            {
+                id: 2,
+                title: 'Triple White Classic Sneakers',
+                desc: 'Een tijdloze streetwear klassieker ontworpen voor een minimalistische en strakke look.',
+                price: 110.00,
+                hasDiscount: false,
+                discountPercent: 0,
+                originalPrice: 110.00,
+                imgs: ['https://media.discordapp.net/attachments/1516067881110999193/1516191899990626364/image.png?ex=6a31bf3e&is=6a306dbe&hm=313128b161446002a798a2e98a14f1450baf110e8383ba6d3a6cf7113f7b75eb&=&format=webp&quality=lossless'],
+                specs: ['Kleurstelling: Triple White.', 'Design: Klassiek laag model.', 'Details: Metallic zilveren dubrae.'],
+                sizeType: 'schoenen',
+                category: 'schoenen',
+                stock: 12,
+                isSoldOut: false
+            },
+            {
+                id: 3,
+                title: 'Groene Sp5der Web Volledige Outfit',
+                desc: 'Het iconische complete Sp5der tracksuit met de herkenbare spinnenweb-graphics en luxe afwerking.',
+                price: 145.00,
+                hasDiscount: false,
+                discountPercent: 0,
+                originalPrice: 145.00,
+                imgs: ['https://media.discordapp.net/attachments/1516067881110999193/1516193096847720458/image.png?ex=6a31c05b&is=6a306edb&hm=240916b2934063d1eedce2fed98cc856973e9149f2dac86f96e7f00a7b9e3f5f&=&format=webp&quality=lossless'],
+                specs: ['Set: Heavyweight Hoodie + Track pants.', 'Kleur: Helder Groen.', 'Materiaal: Premium zacht katoen.'],
+                sizeType: 'kleding',
+                category: 'fully-outfit',
+                stock: 8,
+                isSoldOut: false
+            }
+        ];
+
         let winkelwagen = [];
         let bestellingen = [];
         let huidigGeselecteerdProduct = null;
+        let actieveCategorie = 'all';
 
-        // Supabase Instellen
-        const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
-        const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
-        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // Initialisatie bij laden pagina
+        window.onload = function() {
+            renderCategoryNavigation();
+            renderCatalog();
+            updateCartCount();
+        };
 
         // Render navigatiebalk op basis van de categorieën database
         function renderCategoryNavigation() {
             const filterNav = document.getElementById('mainFilterNav');
             filterNav.innerHTML = '';
 
-            categorieenDatabase.forEach((cat, index) => {
+            categorieenDatabase.forEach((cat) => {
                 const btn = document.createElement('button');
                 btn.classList.add('filter-btn');
-                if(index === 0) btn.classList.add('active');
+                if(cat.slug === actieveCategorie) btn.classList.add('active');
                 btn.innerText = cat.name;
-                btn.onclick = (e) => filterProducts(cat.slug, btn);
+                btn.onclick = () => filterProducts(cat.slug, btn);
                 filterNav.appendChild(btn);
             });
 
@@ -670,139 +706,638 @@
                     newCatSelect.add(new Option(cat.name, cat.slug));
                 }
             });
-        }
 
-        // Live Producten Renderen vanuit Supabase
-        async function renderCatalog() {
-            try {
-                const { data: databaseProducts, error } = await supabaseClient
-                    .from('products')
-                    .select('*');
-
-                if (error) {
-                    console.error("Fout bij ophalen van producten uit Supabase:", error.message);
-                    return;
-                }
-
-                const catalogContainer = document.getElementById('catalogGrid');
-                if (catalogContainer) {
-                    catalogContainer.innerHTML = ''; 
-
-                    if (!databaseProducts || databaseProducts.length === 0) {
-                        catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
-                    } else {
-                        databaseProducts.forEach(product => {
-                            const card = document.createElement('div');
-                            card.classList.add('product-card');
-                            
-                            const title = product.title || 'Naamloos product';
-                            const desc = product.desc || '';
-                            const price = typeof product.price === 'number' ? product.price.toFixed(2) : '0.00';
-                            const imgUrl = product.imgs || '';
-                            const category = product.category || 'algemeen';
-
-                            card.innerHTML = `
-                                <div class="product-img-holder">
-                                    <img src="${imgUrl}" alt="Product Image">
-                                </div>
-                                <div class="product-info">
-                                    <h3>${title}</h3>
-                                    <div class="product-price">€ ${price}</div>
-                                    <p>${desc}</p>
-                                    <div class="product-meta">
-                                        <span class="product-tag">${category}</span>
-                                        <span class="view-btn">Bekijk Info &rarr;</span>
-                                    </div>
-                                </div>
-                            `;
-                            catalogContainer.appendChild(card);
-                        });
+            // Render categorieën in de admin beheerlijst
+            const adminCatContainer = document.getElementById('adminCategoryContainer');
+            if(adminCatContainer) {
+                adminCatContainer.innerHTML = '';
+                categorieenDatabase.forEach(cat => {
+                    if(cat.slug !== 'all') {
+                        const row = document.createElement('div');
+                        row.className = 'admin-cat-row';
+                        row.innerHTML = `
+                            <span><strong>${cat.name}</strong> (${cat.slug})</span>
+                            <button class="admin-delete-btn" onclick="deleteCategory('${cat.slug}')">Verwijder</button>
+                        `;
+                        adminCatContainer.appendChild(row);
                     }
-                }
-            } catch (err) {
-                console.error('Onverwachte fout: ', err);
+                });
             }
+
+            syncMergeDropdowns();
         }
 
-        // Opslaan en Live Zetten in Supabase
-        async function saveProductFromAdmin() {
-            const title = document.getElementById('newTitle').value;
-            const desc = document.getElementById('newDesc').value;
-            const priceVal = document.getElementById('newPrice').value;
-            const category = document.getElementById('newCategory').value;
-            const img1 = document.getElementById('newImg1').value;
+        function renderCatalog() {
+            const grid = document.getElementById('catalogGrid');
+            grid.innerHTML = '';
 
-            if(!title || !desc || !img1 || !priceVal) { 
-                alert('Vul minimaal een Titel, Prijs, Beschrijving en Hoofdfoto in!'); 
-                return; 
+            const gefilterdeProducten = actieveCategorie === 'all' 
+                ? productenDatabase 
+                : productenDatabase.filter(p => p.category === actieveCategorie);
+
+            if(gefilterdeProducten.length === 0) {
+                grid.innerHTML = `<p style="grid-column: 1/-1; text-align: center; color: #555; padding: 2rem;">Geen producten gevonden in deze categorie.</p>`;
+                return;
             }
 
-            const basePrice = parseFloat(priceVal) || 0.00;
-            const productData = {
-                title: title,
-                desc: desc,
-                price: basePrice,
-                imgs: img1, 
-                category: category
+            gefilterdeProducten.forEach(prod => {
+                const card = document.createElement('div');
+                card.classList.add('product-card');
+                if (prod.isSoldOut || prod.stock <= 0) {
+                    card.classList.add('sold-out-card');
+                }
+                card.onclick = () => openProductModal(prod);
+
+                let bannerHtml = '';
+                if (prod.isSoldOut || prod.stock <= 0) {
+                    bannerHtml = `<div class="sold-out-banner">Uitverkocht</div>`;
+                } else if(prod.hasDiscount) {
+                    bannerHtml = `<div class="sale-badge">-${prod.discountPercent}% KORTING</div>`;
+                }
+
+                let priceHtml = '';
+                if(prod.hasDiscount) {
+                    priceHtml = `<div class="product-price"><span class="old-price">€ ${prod.originalPrice.toFixed(2)}</span>€ ${prod.price.toFixed(2)}</div>`;
+                } else {
+                    priceHtml = `<div class="product-price">€ ${prod.price.toFixed(2)}</div>`;
+                }
+
+                card.innerHTML = `
+                    <div class="product-img-holder">
+                        ${bannerHtml}
+                        <img src="${prod.imgs && prod.imgs[0] ? prod.imgs[0] : 'https://via.placeholder.com/300'}" alt="${prod.title}">
+                        <div class="stock-indicator">Voorraad: ${prod.stock}</div>
+                    </div>
+                    <div class="product-info">
+                        <h3>${prod.title || 'Naamloos product'}</h3>
+                        <p>${prod.desc ? prod.desc.substring(0, 60) + '...' : 'Geen omschrijving beschikbaar.'}</p>
+                        <div class="product-meta">
+                            ${priceHtml}
+                            <span class="view-btn">BEKIJKEN</span>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function filterProducts(categorySlug, element) {
+            actieveCategorie = categorySlug;
+            document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+            if(element) {
+                element.classList.add('active');
+            } else {
+                renderCategoryNavigation();
+            }
+            renderCatalog();
+        }
+
+        // Product Modal Functies
+        function openProductModal(product) {
+            huidigGeselecteerdProduct = product;
+            document.getElementById('modalProductTitle').innerText = product.title;
+            document.getElementById('modalProductDesc').innerText = product.desc;
+            
+            if(product.hasDiscount) {
+                document.getElementById('modalProductPrice').innerHTML = `<span class="old-price">€ ${product.originalPrice.toFixed(2)}</span>€ ${product.price.toFixed(2)}`;
+            } else {
+                document.getElementById('modalProductPrice').innerText = `€ ${product.price.toFixed(2)}`;
+            }
+
+            const mainImg = document.getElementById('modalProductImg');
+            mainImg.src = product.imgs && product.imgs[0] ? product.imgs[0] : 'https://via.placeholder.com/300';
+
+            // Thumbnails opbouwen
+            const thumbContainer = document.getElementById('modalThumbnails');
+            thumbContainer.innerHTML = '';
+            if(product.imgs && product.imgs.length > 0) {
+                product.imgs.forEach((imgUrl, idx) => {
+                    if(imgUrl) {
+                        const thumb = document.createElement('img');
+                        thumb.src = imgUrl;
+                        thumb.className = `thumb-img ${idx === 0 ? 'active' : ''}`;
+                        thumb.onclick = () => {
+                            mainImg.src = imgUrl;
+                            document.querySelectorAll('.thumb-img').forEach(t => t.classList.remove('active'));
+                            thumb.classList.add('active');
+                        };
+                        thumbContainer.appendChild(thumb);
+                    }
+                });
+            }
+
+            // Maat selector vullen
+            const sizeSelect = document.getElementById('productSize');
+            sizeSelect.innerHTML = '';
+            const maten = product.sizeType === 'schoenen' 
+                ? ['36', '37', '38', '39', '40', '41', '42', '43', '44', '45']
+                : ['S', 'M', 'L', 'XL'];
+            
+            maten.forEach(m => {
+                sizeSelect.add(new Option(m, m));
+            });
+
+            // Specs invullen
+            const specsList = document.getElementById('modalProductSpecs');
+            specsList.innerHTML = '';
+            if(product.specs) {
+                product.specs.forEach(spec => {
+                    if(spec) {
+                        const li = document.createElement('li');
+                        li.innerHTML = `<strong>Info</strong>${spec}`;
+                        specsList.appendChild(li);
+                    }
+                });
+            }
+
+            // Bestelknop uitschakelen bij uitverkocht
+            const cartBtn = document.getElementById('modalCartBtn');
+            if(product.stock <= 0 || product.isSoldOut) {
+                cartBtn.innerText = "Uitverkocht";
+                cartBtn.classList.add('disabled-btn');
+                cartBtn.disabled = true;
+            } else {
+                cartBtn.innerText = "Toevoegen aan winkelwagen";
+                cartBtn.classList.remove('disabled-btn');
+                cartBtn.disabled = false;
+            }
+
+            document.getElementById('productModal').style.display = 'flex';
+        }
+
+        function closeProductModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        // Winkelwagen Logica
+        function addToCart() {
+            if(!huidigGeselecteerdProduct) return;
+            const gekozenMaat = document.getElementById('productSize').value;
+            
+            // Controleer of item al in mandje zit met dezelfde maat
+            const bestaandItem = winkelwagen.find(item => item.id === huidigGeselecteerdProduct.id && item.maat === gekozenMaat);
+            
+            if(bestaandItem) {
+                bestaandItem.aantal += 1;
+            } else {
+                winkelwagen.push({
+                    id: huidigGeselecteerdProduct.id,
+                    title: huidigGeselecteerdProduct.title,
+                    price: huidigGeselecteerdProduct.price,
+                    maat: gekozenMaat,
+                    aantal: 1
+                });
+            }
+
+            updateCartCount();
+            closeProductModal();
+            openCartModal();
+        }
+
+        function updateCartCount() {
+            const totaalAantal = winkelwagen.reduce((totaal, item) => totaal + item.aantal, 0);
+            document.getElementById('cartCount').innerText = totaalAantal;
+        }
+
+        function openCartModal() {
+            const container = document.getElementById('cartItemsContainer');
+            container.innerHTML = '';
+
+            if(winkelwagen.length === 0) {
+                container.innerHTML = `<p style="color:#666; text-align:center; padding:1rem;">Je winkelwagen is momenteel leeg.</p>`;
+            } else {
+                let totaalPrijs = 0;
+                winkelwagen.forEach((item, index) => {
+                    const subTotaal = item.price * item.aantal;
+                    totaalPrijs += subTotaal;
+
+                    const row = document.createElement('div');
+                    row.className = 'cart-item-row';
+                    row.innerHTML = `
+                        <div>
+                            <span style="font-weight:bold; color:#fff;">${item.title}</span><br>
+                            <span style="font-size:0.8rem; color:#888;">Maat: ${item.maat} | Aantal: ${item.aantal}</span>
+                        </div>
+                        <div style="display:flex; align-items:center; gap: 1rem;">
+                            <span style="color:var(--accent-color); font-weight:bold;">€ ${subTotaal.toFixed(2)}</span>
+                            <button class="remove-btn" onclick="removeFromCart(${index})">&times;</button>
+                        </div>
+                    `;
+                    container.appendChild(row);
+                });
+
+                const totaalRow = document.createElement('div');
+                totaalRow.style = 'display:flex; justify-content:space-between; margin-top:1.5rem; font-weight:bold; font-size:1.1rem; color:#fff;';
+                totaalRow.innerHTML = `<span>Totaalbedrag:</span><span style="color:var(--accent-color)">€ ${totaalPrijs.toFixed(2)}</span>`;
+                container.appendChild(totaalRow);
+            }
+
+            document.getElementById('cartModal').style.display = 'flex';
+        }
+
+        function closeCartModal() {
+            document.getElementById('cartModal').style.display = 'none';
+        }
+
+        function removeFromCart(index) {
+            winkelwagen.splice(index, 1);
+            updateCartCount();
+            openCartModal();
+        }
+
+        // Checkout Logica
+        function openCheckout() {
+            if(winkelwagen.length === 0) {
+                alert('Je winkelwagen is leeg!');
+                return;
+            }
+            closeCartModal();
+            document.getElementById('checkoutModal').style.display = 'flex';
+        }
+
+        function closeCheckout() {
+            document.getElementById('checkoutModal').style.display = 'none';
+        }
+
+        function placeOrder() {
+            const naam = document.getElementById('custName').value.trim();
+            const snapchat = document.getElementById('custSnapchat').value.trim();
+            const adres = document.getElementById('custAddress').value.trim();
+            const tel = document.getElementById('custPhone').value.trim();
+
+            if(!naam || !snapchat || !adres) {
+                alert('Vul alsjeblieft alle verplichte velden in.');
+                return;
+            }
+
+            const nieuweBestelling = {
+                id: 'ORD-' + Math.floor(100000 + Math.random() * 900000),
+                klant: { naam, snapchat, adres, tel },
+                items: [...winkelwagen],
+                totaal: winkelwagen.reduce((t, i) => t + (i.price * i.aantal), 0),
+                datum: new Date().toLocaleString('nl-NL')
             };
 
-            try {
-                const editId = document.getElementById('editProductId').value;
-
-                if(editId) {
-                    const { error } = await supabaseClient
-                        .from('products')
-                        .update(productData)
-                        .eq('id', editId);
-
-                    if (error) throw error;
-                    alert('Product succesvol gewijzigd in Supabase!');
-                } else {
-                    const { error } = await supabaseClient
-                        .from('products')
-                        .insert([productData]);
-
-                    if (error) throw error;
-                    alert(`Product "${title}" staat succesvol live in Supabase!`);
+            // Voorraad live verminderen
+            winkelwagen.forEach(cartItem => {
+                const dbProd = productenDatabase.find(p => p.id === cartItem.id);
+                if(dbProd) {
+                    dbProd.stock = Math.max(0, dbProd.stock - cartItem.aantal);
+                    if(dbProd.stock <= 0) dbProd.isSoldOut = true;
                 }
+            });
 
-                document.getElementById('newTitle').value = '';
-                document.getElementById('newDesc').value = '';
-                document.getElementById('newPrice').value = '85';
-                document.getElementById('newImg1').value = '';
-                
-                renderCatalog();
-                closeAdminModal();
+            bestellingen.push(nieuweBestelling);
+            
+            // Schoonmaken
+            winkelwagen = [];
+            updateCartCount();
+            document.getElementById('custName').value = '';
+            document.getElementById('custSnapchat').value = '';
+            document.getElementById('custAddress').value = '';
+            document.getElementById('custPhone').value = '';
 
-            } catch (err) {
-                console.error("Supabase Fout:", err.message);
-                alert("Er ging iets mis met opslaan in de database: " + err.message);
-            }
-        }
-
-        function triggerAdminLogin() {
-            const pass = prompt("Voer de eigenaar toegangscode in:");
-            if (pass === "86comunnity123!") { 
-                document.getElementById('adminModal').style.display = 'flex'; 
-            }
-            else if (pass !== null) { alert("Onjuiste code."); }
-        }
-
-        function closeAdminModal() { document.getElementById('adminModal').style.display = 'none'; }
-        function openCartModal() { document.getElementById('cartModal').style.display = 'flex'; }
-        function closeCartModal() { document.getElementById('cartModal').style.display = 'none'; }
-
-        window.onclick = function(e) {
-            if (e.target.classList.contains('modal')) {
-                e.target.style.display = 'none';
-            }
-        }
-
-        // Start op bij laden van pagina
-        window.addEventListener('DOMContentLoaded', () => {
-            renderCategoryNavigation();
+            closeCheckout();
             renderCatalog();
-        });
+            updateAdminPanel();
+
+            alert(`Gefeliciteerd! Je bestelling (${nieuweBestelling.id}) is voorbereid.\n\nStuur nu direct een bericht naar Snapchat: services_86 met je naam om de betaling af te ronden.`);
+        }
+
+        // Admin Logica
+        function triggerAdminLogin() {
+            const ww = prompt("Voer het eigenaar wachtwoord in:");
+            if(ww === "86admin") {
+                document.getElementById('adminModal').style.display = 'flex';
+                updateAdminPanel();
+            } else if (ww !== null) {
+                alert("Wachtwoord onjuist.");
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('adminModal').style.display = 'none';
+        }
+
+        function toggleDiscountField() {
+            const type = document.getElementById('hasDiscount').value;
+            const block = document.getElementById('discountInputBlock');
+            block.style.display = type === 'ja' ? 'grid' : 'none';
+            calculateDiscountPreview();
+        }
+
+        function calculateDiscountPreview() {
+            const basisPrijs = parseFloat(document.getElementById('newPrice').value) || 0;
+            const kortingProcent = parseInt(document.getElementById('discountPercent').value) || 0;
+            const isJa = document.getElementById('hasDiscount').value === 'ja';
+
+            if(isJa) {
+                const nieuwePrijs = basisPrijs * (1 - (kortingProcent / 100));
+                document.getElementById('discountPreviewPrice').innerText = `€ ${nieuwePrijs.toFixed(2)}`;
+            } else {
+                document.getElementById('discountPreviewPrice').innerText = `€ ${basisPrijs.toFixed(2)}`;
+            }
+        }
+
+        function saveProductFromAdmin() {
+            const editId = document.getElementById('editProductId').value;
+            const title = document.getElementById('newTitle').value.trim();
+            const desc = document.getElementById('newDesc').value.trim();
+            const sizeType = document.getElementById('newSizeType').value;
+            const stock = parseInt(document.getElementById('newStock').value) || 0;
+            const category = document.getElementById('newCategory').value;
+            const originalPrice = parseFloat(document.getElementById('newPrice').value) || 0;
+            const isDiscount = document.getElementById('hasDiscount').value === 'ja';
+            const discountPercent = parseInt(document.getElementById('discountPercent').value) || 0;
+            
+            const img1 = document.getElementById('newImg1').value.trim();
+            const img2 = document.getElementById('newImg2').value.trim();
+            const spec1 = document.getElementById('newSpec1').value.trim();
+            const spec2 = document.getElementById('newSpec2').value.trim();
+
+            if(!title || !originalPrice) {
+                alert('Titel en Basisprijs zijn verplicht!');
+                return;
+            }
+
+            const berekendePrijs = isDiscount ? (originalPrice * (1 - (discountPercent / 100))) : originalPrice;
+            const imgs = [img1, img2].filter(i => i !== '');
+            const specs = [spec1, spec2].filter(s => s !== '');
+
+            if(editId) {
+                // Bestaand product bewerken
+                const prod = productenDatabase.find(p => p.id == editId);
+                if(prod) {
+                    prod.title = title;
+                    prod.desc = desc;
+                    prod.sizeType = sizeType;
+                    prod.stock = stock;
+                    prod.isSoldOut = stock <= 0;
+                    prod.category = category;
+                    prod.originalPrice = originalPrice;
+                    prod.hasDiscount = isDiscount;
+                    prod.discountPercent = discountPercent;
+                    prod.price = berekendePrijs;
+                    if(imgs.length > 0) prod.imgs = imgs;
+                    prod.specs = specs;
+                }
+            } else {
+                // Nieuw product aanmaken
+                const nieuwProduct = {
+                    id: Date.now(),
+                    title, desc, sizeType, stock, category, originalPrice,
+                    hasDiscount: isDiscount,
+                    discountPercent,
+                    price: berekendePrijs,
+                    imgs: imgs.length > 0 ? imgs : ['https://via.placeholder.com/300'],
+                    specs,
+                    isSoldOut: stock <= 0
+                };
+                productenDatabase.push(nieuwProduct);
+            }
+
+            clearAdminForm();
+            renderCatalog();
+            updateAdminPanel();
+            alert('Product succesvol live gezet/bijgewerkt!');
+        }
+
+        function editProductFromAdmin(id) {
+            const prod = productenDatabase.find(p => p.id === id);
+            if(!prod) return;
+
+            document.getElementById('formSectionTitle').innerText = "1. Product Bewerken";
+            document.getElementById('editProductId').value = prod.id;
+            document.getElementById('newTitle').value = prod.title;
+            document.getElementById('newDesc').value = prod.desc || '';
+            document.getElementById('newSizeType').value = prod.sizeType;
+            document.getElementById('newStock').value = prod.stock;
+            document.getElementById('newCategory').value = prod.category;
+            document.getElementById('newPrice').value = prod.originalPrice;
+            
+            document.getElementById('hasDiscount').value = prod.hasDiscount ? 'ja' : 'nee';
+            document.getElementById('discountPercent').value = prod.discountPercent;
+            toggleDiscountField();
+
+            document.getElementById('newImg1').value = prod.imgs && prod.imgs[0] ? prod.imgs[0] : '';
+            document.getElementById('newImg2').value = prod.imgs && prod.imgs[1] ? prod.imgs[1] : '';
+            document.getElementById('newSpec1').value = prod.specs && prod.specs[0] ? prod.specs[0] : '';
+            document.getElementById('newSpec2').value = prod.specs && prod.specs[1] ? prod.specs[1] : '';
+
+            document.getElementById('formSubmitBtn').innerText = "Wijzigingen Opslaan";
+            document.getElementById('cancelEditBtn').style.display = "block";
+        }
+
+        function clearAdminForm() {
+            document.getElementById('formSectionTitle').innerText = "1. Nieuw Product Toevoegen";
+            document.getElementById('editProductId').value = "";
+            document.getElementById('newTitle').value = "";
+            document.getElementById('newDesc').value = "";
+            document.getElementById('newStock').value = "10";
+            document.getElementById('newPrice').value = "85";
+            document.getElementById('hasDiscount').value = "nee";
+            document.getElementById('discountPercent').value = "0";
+            toggleDiscountField();
+            document.getElementById('newImg1').value = "";
+            document.getElementById('newImg2').value = "";
+            document.getElementById('newSpec1').value = "";
+            document.getElementById('newSpec2').value = "";
+            document.getElementById('formSubmitBtn').innerText = "Product Live Zetten";
+            document.getElementById('cancelEditBtn').style.display = "none";
+        }
+
+        function deleteProduct(id) {
+            if(confirm('Weet je zeker dat je dit product wilt permanent wilt verwijderen?')) {
+                productenDatabase = productenDatabase.filter(p => p.id !== id);
+                renderCatalog();
+                updateAdminPanel();
+            }
+        }
+
+        function addCategoryFromAdmin() {
+            const slug = document.getElementById('newCatSlug').value.trim().toLowerCase();
+            const name = document.getElementById('newCatName').value.trim();
+
+            if(!slug || !name) {
+                alert('Vul zowel de code als de weergavenaam in.');
+                return;
+            }
+
+            if(categorieenDatabase.some(c => c.slug === slug)) {
+                alert('Deze categoriecode bestaat al.');
+                return;
+            }
+
+            categorieenDatabase.push({ slug, name });
+            document.getElementById('newCatSlug').value = '';
+            document.getElementById('newCatName').value = '';
+            
+            renderCategoryNavigation();
+            updateAdminPanel();
+        }
+
+        function deleteCategory(slug) {
+            if(confirm(`Weet je zeker dat je de categorie '${slug}' wilt verwijderen? Producten worden niet verwijderd.`)) {
+                categorieenDatabase = categorieenDatabase.filter(c => c.slug !== slug);
+                // Zet producten in deze categorie terug naar 'hoodies' of eerste beschikbare om bugs te voorkomen
+                productenDatabase.forEach(p => {
+                    if(p.category === slug) p.category = 'hoodies';
+                });
+                if(actieveCategorie === slug) actieveCategorie = 'all';
+                renderCategoryNavigation();
+                renderCatalog();
+                updateAdminPanel();
+            }
+        }
+
+        function changeStockMini(id, nieuwAantal) {
+            const prod = productenDatabase.find(p => p.id === id);
+            if(prod) {
+                prod.stock = Math.max(0, parseInt(nieuwAantal) || 0);
+                prod.isSoldOut = prod.stock <= 0;
+                renderCatalog();
+            }
+        }
+
+        function toggleStatusMini(id) {
+            const prod = productenDatabase.find(p => p.id === id);
+            if(prod) {
+                prod.isSoldOut = !prod.isSoldOut;
+                if(!prod.isSoldOut && prod.stock <= 0) prod.stock = 5; // automatische veilige voorraad trigger
+                renderCatalog();
+                updateAdminPanel();
+            }
+        }
+
+        function changeCategoryMini(id, nieuweCat) {
+            const prod = productenDatabase.find(p => p.id === id);
+            if(prod) {
+                prod.category = nieuweCat;
+                renderCatalog();
+            }
+        }
+
+        function syncMergeDropdowns() {
+            const p1 = document.getElementById('mergeProd1');
+            const p2 = document.getElementById('mergeProd2');
+            if(!p1 || !p2) return;
+
+            p1.innerHTML = '';
+            p2.innerHTML = '';
+
+            productenDatabase.forEach(p => {
+                p1.add(new Option(p.title, p.id));
+                p2.add(new Option(p.title, p.id));
+            });
+        }
+
+        function generateFullyOutfit() {
+            const id1 = parseInt(document.getElementById('mergeProd1').value);
+            const id2 = parseInt(document.getElementById('mergeProd2').value);
+            const combiTitel = document.getElementById('mergeTitle').value.trim();
+            const combiPrijs = parseFloat(document.getElementById('mergePrice').value) || 0;
+
+            if(!id1 || !id2 || !combiTitel || !combiPrijs) {
+                alert('Selecteer twee producten en voer een titel + combiprijs in.');
+                return;
+            }
+
+            const pr1 = productenDatabase.find(p => p.id === id1);
+            const pr2 = productenDatabase.find(p => p.id === id2);
+
+            if(!pr1 || !pr2) return;
+
+            const samengevoegdProduct = {
+                id: Date.now(),
+                title: combiTitel,
+                desc: `Exclusieve setdeal: Combinatie van '${pr1.title}' en '${pr2.title}'. Complete look in één pakket.`,
+                price: combiPrijs,
+                originalPrice: combiPrijs,
+                hasDiscount: false,
+                discountPercent: 0,
+                imgs: [pr1.imgs[0], pr2.imgs[0]].filter(Boolean),
+                specs: [`Inclusief item 1: ${pr1.title}`, `Inclusief item 2: ${pr2.title}`, 'Samenstelling: Premium Outfit Set'],
+                sizeType: 'kleding',
+                category: 'fully-outfit',
+                stock: Math.min(pr1.stock, pr2.stock),
+                isSoldOut: Math.min(pr1.stock, pr2.stock) <= 0
+            };
+
+            productenDatabase.push(samengevoegdProduct);
+            
+            document.getElementById('mergeTitle').value = '';
+            document.getElementById('mergePrice').value = '';
+            
+            renderCatalog();
+            updateAdminPanel();
+            alert('Luxe Fully Outfit combiset succesvol samengesteld en live gezet!');
+        }
+
+        function updateAdminPanel() {
+            // Live producten lijst renderen
+            const stockList = document.getElementById('adminStockList');
+            stockList.innerHTML = '';
+
+            productenDatabase.forEach(p => {
+                const row = document.createElement('div');
+                row.className = 'admin-product-row';
+                
+                // Bouw categorie opties op
+                let catOptions = '';
+                categorieenDatabase.forEach(c => {
+                    if(c.slug !== 'all') {
+                        catOptions += `<option value="${c.slug}" ${p.category === c.slug ? 'selected' : ''}>${c.name}</option>`;
+                    }
+                });
+
+                row.innerHTML = `
+                    <div>
+                        <strong>${p.title}</strong><br>
+                        <span style="color:#888; font-size:0.75rem;">Prijs: €${p.price.toFixed(2)}</span>
+                    </div>
+                    <div class="admin-stock-controls">
+                        <select class="category-select-mini" onchange="changeCategoryMini(${p.id}, this.value)">
+                            ${catOptions}
+                        </select>
+                        <input type="number" class="stock-input-mini" value="${p.stock}" min="0" onchange="changeStockMini(${p.id}, this.value)">
+                        <button class="status-toggle-btn ${p.isSoldOut ? 'status-soldout' : 'status-active'}" onclick="toggleStatusMini(${p.id})">
+                            ${p.isSoldOut ? 'Sold Out' : 'Actief'}
+                        </button>
+                        <button class="admin-edit-btn" onclick="editProductFromAdmin(${p.id})">Bewerk</button>
+                        <button class="admin-delete-btn" onclick="deleteProduct(${p.id})">Del</button>
+                    </div>
+                `;
+                stockList.appendChild(row);
+            });
+
+            // Bestellingen log renderen
+            const ordersLog = document.getElementById('adminOrdersLog');
+            ordersLog.innerHTML = '';
+            if(bestellingen.length === 0) {
+                ordersLog.innerHTML = `<p style="color:#555; font-size:0.85rem;">Nog geen bestellingen binnengekomen.</p>`;
+            } else {
+                bestellingen.forEach(b => {
+                    const card = document.createElement('div');
+                    card.className = 'order-card';
+                    
+                    let itemsHtml = '';
+                    b.items.forEach(i => {
+                        itemsHtml += `<li>${i.title} (Maat: ${i.maat}, ${i.aantal}x)</li>`;
+                    });
+
+                    card.innerHTML = `
+                        <p><strong>Order ID:</strong> ${b.id} <span style="color:#888; float:right;">${b.datum}</span></p>
+                        <p><strong>Klant:</strong> ${b.klant.naam} (${b.klant.snapchat})</p>
+                        <p><strong>Adres:</strong> ${b.klant.adres} ${b.klant.tel ? '| Tel: ' + b.klant.tel : ''}</p>
+                        <ul style="margin: 5px 0; padding-left: 15px; color:#aaa;">${itemsHtml}</ul>
+                        <p style="margin-top:5px; font-weight:bold; color:var(--accent-color)">Totaal: € ${b.totaal.toFixed(2)}</p>
+                    `;
+                    ordersLog.appendChild(card);
+                });
+            }
+
+            syncMergeDropdowns();
+        }
     </script>
 </body>
 </html>
