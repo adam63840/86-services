@@ -1251,7 +1251,10 @@
             }
         }
 
-async function saveProductFromAdmin() {
+} // Dit sluit de vorige functie netjes af op regel 450!
+
+        // Nu staat saveProductFromAdmin weer helemaal los en is hij overal bereikbaar!
+        async function saveProductFromAdmin() {
             const title = document.getElementById('newTitle').value;
             const desc = document.getElementById('newDesc').value;
             const sizeType = document.getElementById('newSizeType').value;
@@ -1340,7 +1343,7 @@ async function saveProductFromAdmin() {
         const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Overschrijf de oude renderCatalog om live data uit Supabase te halen
+        // Live data ophalen en tonen op de site
         async function renderCatalog() {
             try {
                 const { data: databaseProducts, error } = await supabaseClient
@@ -1393,7 +1396,7 @@ async function saveProductFromAdmin() {
             }
         }
 
-        // Start de boel op zodra de pagina geladen is
+        // Start op bij laden van pagina
         window.addEventListener('DOMContentLoaded', () => {
             renderCategoryNavigation();
             renderCatalog();
