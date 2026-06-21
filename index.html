@@ -1346,60 +1346,76 @@
         }
 
 
+        // Supabase Configuratie
         const SUPABASE_URL = "https://nzavhpkijabqnulvwxiq.supabase.co";
         const SUPABASE_ANON_KEY = "sb_publishable_dQd1if_VJPvM3kkCz_pmSg_t6Nw7WQQ";
         const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
         // Overschrijf de oude renderCatalog om live data uit Supabase te halen
-async function renderCatalog() {
-    try {
-        // 1. Haal de producten live op uit Supabase
-        const { data: databaseProducts, error } = await supabaseClient
-            .from('products')
-            .select('*');
+        async function renderCatalog() {
+            try {
+                // 1. Haal de producten live op uit Supabase
+                const { data: databaseProducts, error } = await supabaseClient
+                    .from('products')
+                    .select('*');
 
-        if (error) {
-            console.error("Fout bij ophalen van producten uit Supabase:", error.message);
-            return;
-        }
+                if (error) {
+                    console.error("Fout bij ophalen van producten uit Supabase:", error.message);
+                    return;
+                }
 
-        // 2. Zoek de HTML-container waar de producten in moeten staan
-        const catalogContainer = document.getElementById('product-grid') || 
-                                 document.getElementById('products-grid') || 
-                                 document.getElementById('catalogus') ||
-                                 document.getElementById('product-container');
+                // 2. Zoek de HTML-container waar de producten in moeten staan
+                const catalogContainer = document.getElementById('catalogGrid');
 
-        // Als de container is gevonden, voer dan pas de HTML-opbouw uit
-        if (catalogContainer) {
-            
-            catalogContainer.innerHTML = ''; // Maak de container leeg
+                // Als de container is gevonden, voer dan pas de HTML-opbouw uit
+                if (catalogContainer) {
+                    catalogContainer.innerHTML = ''; // Maak de container leeg
 
-            // Als er geen producten zijn gevonden, toon een melding
-            if (!databaseProducts || databaseProducts.length === 0) {
-                catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
-            } else {
-                // 3. Bouw de HTML op voor elk product uit de database
-                databaseProducts.forEach(product => {
-                    const productElement = document.createElement('div');
-                    productElement.className = 'product-card'; 
+                    // Als er geen producten zijn gevonden, toon een melding
+                    if (!databaseProducts || databaseProducts.length === 0) {
+                        catalogContainer.innerHTML = '<p style="color: white; text-align: center;">Geen producten gevonden in de database.</p>';
+                    } else {
+                        // 3. Bouw de HTML op voor elk product uit de database
+                        databaseProducts.forEach(product => {
+                            const productElement = document.createElement('div');
+                            productElement.className = 'product-card'; 
 
-                    productElement.innerHTML = `
-                        <img src="${product.imgs || ''}" alt="${product.name || 'Product'}" style="max-width: 100%; height: auto;">
-                        <h3>${product.name || 'Naamloos product'}</h3>
-                        <p class="price">Prijs: €${product.price || '0.00'}</p>
-                    `;
+                            // Klikbaar maken zodat de pop-up ook werkt met live data
+                            productElement.onclick = () => openProductModal(product);
 
-                    catalogContainer.appendChild(productElement);
-                });
+                            productElement.innerHTML = `
+                                <div class="product-img-holder">
+                                    <img src="${product.imgs || ''}" alt="${product.title || 'Product'}">
+                                </div>
+                                <div class="product-info">
+                                    <h3>${product.title || 'Naamloos product'}</h3>
+                                    <div class="product-price">€ ${product.price || '0.00'}</div>
+                                    <p>${product.desc || ''}</p>
+                                    <div class="product-meta">
+                                        <span class="product-tag">${product.category || 'algemeen'}</span>
+                                        <span class="view-btn">Bekijk Info &rarr;</span>
+                                    </div>
+                                </div>
+                            `;
+
+                            catalogContainer.appendChild(productElement);
+                        });
+                    }
+
+                } else {
+                    console.log("Geen product-container gevonden op deze pagina.");
+                }
+
+            } catch (err) {
+                console.error('Onverwachte fout: ', err);
             }
-
-        } else {
-            // Als we op de admin-pagina zijn en er is geen container, loggen we dat zonder te crashen
-            console.log("Geen product-container gevonden op deze pagina.");
         }
 
-    } catch (err) {
-        console.error('Onverwachte fout: ', err);
-    }
-}
+        // Zorg ervoor dat de website de functies direct uitvoert als de pagina opstart
+        window.addEventListener('DOMContentLoaded', () => {
+            renderCategoryNavigation();
+            renderCatalog();
+        });
+    </script>
 </body>
 </html>
